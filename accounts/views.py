@@ -6,8 +6,11 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
+from drf_spectacular.utils import extend_schema
+
 from .serializers import (
     RegisterSerializer,
+    LoginSerializer,
     ProfileSerializer
 )
 
@@ -16,6 +19,10 @@ class RegisterView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        request=RegisterSerializer,
+        responses={201: dict}
+    )
     def post(self, request):
 
         serializer = RegisterSerializer(
@@ -43,19 +50,25 @@ class LoginView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        request=LoginSerializer,
+        responses={200: dict}
+    )
     def post(self, request):
 
-        username = request.data.get("username")
-        password = request.data.get("password")
+        serializer = LoginSerializer(
+            data=request.data
+        )
 
-        if not username or not password:
+        if not serializer.is_valid():
 
             return Response(
-                {
-                    "detail": "Username and password are required."
-                },
+                serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        username = serializer.validated_data["username"]
+        password = serializer.validated_data["password"]
 
         user = authenticate(
             username=username,
@@ -99,6 +112,9 @@ class ProfileView(APIView):
         IsAuthenticated
     ]
 
+    @extend_schema(
+        responses=ProfileSerializer
+    )
     def get(self, request):
 
         serializer = ProfileSerializer(
